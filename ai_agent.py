@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 from config import Config
 from models import DatabaseManager
+from telegram_notifier import send_analysis_summary, send_system_alert
 import logging
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class MacadamiaTradeAIAgent:
         return summary
     
     def generate_daily_report(self) -> str:
-        """일일 보고서 생성"""
+        """일일 보고서 생성 및 텔레그램 알림"""
         analysis = self.analyze_trade_trends(1)
         weekly_analysis = self.analyze_trade_trends(7)
         
@@ -121,4 +122,29 @@ class MacadamiaTradeAIAgent:
 *이 보고서는 AI 에이전트에 의해 자동 생성되었습니다.*
         """
         
+        # 텔레그램으로 분석 요약 전송
+        try:
+            send_analysis_summary(analysis, 1)
+            logger.info("일일 분석 요약을 텔레그램으로 전송했습니다.")
+        except Exception as e:
+            logger.error(f"텔레그램 분석 전송 오류: {e}")
+        
         return report
+    
+    def analyze_with_notification(self, days: int = 7) -> str:
+        """분석 수행 및 텔레그램 알림"""
+        try:
+            analysis = self.analyze_trade_trends(days)
+            
+            # 텔레그램으로 분석 결과 전송
+            send_analysis_summary(analysis, days)
+            
+            return analysis
+            
+        except Exception as e:
+            # 분석 오류 알림
+            send_system_alert(
+                'error',
+                f"AI 분석 중 오류 발생 ({days}일): {str(e)}"
+            )
+            raise e

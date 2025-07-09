@@ -10,6 +10,10 @@ class Config:
     # Database
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///macadamia_trade.db')
     
+    # Telegram Settings
+    TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+    
     # 데이터 소스 URLs
     TRADE_DATA_SOURCES = {
         'comtrade': 'https://comtrade.un.org/api/get',

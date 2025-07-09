@@ -4,8 +4,10 @@ from bs4 import BeautifulSoup
 from typing import List, Dict
 import time
 import logging
+from datetime import datetime, timedelta
 from config import Config
 from models import DatabaseManager
+from telegram_notifier import send_new_data_alert, send_system_alert
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -98,7 +100,10 @@ class MacadamiaTradeDataScraper:
         return all_data
     
     def save_to_database(self, trade_data: List[Dict]):
-        """수집된 데이터를 데이터베이스에 저장"""
+        """수집된 데이터를 데이터베이스에 저장하고 신규 데이터 알림 전송"""
+        new_records = []
+        saved_count = 0
+        
         for data in trade_data:
             try:
                 record_data = {
@@ -114,7 +119,61 @@ class MacadamiaTradeDataScraper:
                     'trade_type': data.get('trade_type', '')
                 }
                 
-                self.db.add_record(record_data)
+                # 데이터베이스에 저장
+                saved_record = self.db.add_record(record_data)
+                if saved_record:
+                    new_records.append(data)
+                    saved_count += 1
                 
             except Exception as e:
                 logger.error(f"데이터베이스 저장 오류: {e}")
+        
+        # 신규 데이터가 있으면 텔레그램 알림 전송
+        if new_records:
+            try:
+                send_new_data_alert(new_records)
+                logger.info(f"텔레그램 신규 데이터 알림 전송: {len(new_records)}건")
+            except Exception as e:
+                logger.error(f"텔레그램 알림 전송 오류: {e}")
+        
+        return saved_count
+    
+    def collect_and_notify(self) -> Dict:
+        """데이터 수집 및 결과 알림"""
+        start_time = datetime.now()
+        
+        try:
+            # 데이터 수집
+            trade_data = self.collect_all_data()
+            
+            # 데이터베이스 저장
+            saved_count = self.save_to_database(trade_data)
+            
+            # 수집 완료 알림
+            duration = (datetime.now() - start_time).total_seconds()
+            
+            if saved_count > 0:
+                send_system_alert(
+                    'success',
+                    f"데이터 수집 완료\n• 수집된 데이터: {len(trade_data)}건\n• 저장된 데이터: {saved_count}건\n• 소요 시간: {duration:.1f}초"
+                )
+            
+            return {
+                'success': True,
+                'collected': len(trade_data),
+                'saved': saved_count,
+                'duration': duration
+            }
+            
+        except Exception as e:
+            # 오류 알림
+            send_system_alert(
+                'error',
+                f"데이터 수집 중 오류 발생: {str(e)}"
+            )
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'duration': (datetime.now() - start_time).total_seconds()
+            }

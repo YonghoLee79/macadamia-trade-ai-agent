@@ -347,19 +347,31 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <h6><i class="fas fa-download me-2"></i>데이터 수집</h6>
                                 <p class="text-muted">수동으로 최신 마카다미아 무역 데이터를 수집합니다.</p>
                                 <button class="btn btn-primary-custom" onclick="manualCollect()">
                                     <i class="fas fa-sync-alt me-2"></i>데이터 수집 실행
                                 </button>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <h6><i class="fas fa-file-alt me-2"></i>보고서 생성</h6>
                                 <p class="text-muted">현재 데이터를 기반으로 AI 분석 보고서를 생성합니다.</p>
                                 <button class="btn btn-danger-custom" onclick="generateReport()">
                                     <i class="fas fa-file-pdf me-2"></i>보고서 생성
                                 </button>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <h6><i class="fas fa-paper-plane me-2"></i>텔레그램 알림</h6>
+                                <p class="text-muted">텔레그램 연결을 테스트하고 수동 알림을 전송합니다.</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-info btn-sm" onclick="testTelegram()">
+                                        <i class="fas fa-test me-1"></i>연결 테스트
+                                    </button>
+                                    <button class="btn btn-success btn-sm" onclick="sendTelegramSummary()">
+                                        <i class="fas fa-paper-plane me-1"></i>요약 전송
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -608,6 +620,56 @@
                         네트워크 오류가 발생했습니다.
                     </div>
                 `;
+            }
+        }
+
+        // 텔레그램 연결 테스트
+        async function testTelegram() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>테스트 중...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/telegram/test', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('텔레그램 연결 테스트 성공!\n메시지가 전송되었습니다.');
+                } else {
+                    alert('텔레그램 연결 테스트 실패: ' + data.error);
+                }
+            } catch (error) {
+                alert('네트워크 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // 텔레그램 요약 전송
+        async function sendTelegramSummary() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>전송 중...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/telegram/summary', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('일일 요약이 텔레그램으로 전송되었습니다!');
+                } else {
+                    alert('텔레그램 전송 실패: ' + data.error);
+                }
+            } catch (error) {
+                alert('네트워크 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
             }
         }
 
