@@ -1,10 +1,10 @@
 import openai
+from openai import OpenAI
 from typing import List, Dict
 import json
 from datetime import datetime, timedelta
 from config import Config
 from models import DatabaseManager
-from telegram_notifier import send_analysis_summary, send_system_alert
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class MacadamiaTradeAIAgent:
     def __init__(self):
         self.config = Config()
-        openai.api_key = self.config.OPENAI_API_KEY
+        self.client = OpenAI(api_key=self.config.OPENAI_API_KEY)
         self.db = DatabaseManager(self.config.DATABASE_URL)
     
     def analyze_trade_trends(self, days=7) -> str:
@@ -42,7 +42,7 @@ class MacadamiaTradeAIAgent:
         """
         
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "당신은 국제무역 전문 분석가입니다. 마카다미아 무역 데이터를 분석하여 인사이트를 제공합니다."},
@@ -124,10 +124,10 @@ class MacadamiaTradeAIAgent:
         
         # 텔레그램으로 분석 요약 전송
         try:
-            send_analysis_summary(analysis, 1)
-            logger.info("일일 분석 요약을 텔레그램으로 전송했습니다.")
+            # send_analysis_summary(analysis, 1)
+            logger.info("일일 분석 요약 생성 완료 (텔레그램 전송은 별도 처리)")
         except Exception as e:
-            logger.error(f"텔레그램 분석 전송 오류: {e}")
+            logger.error(f"분석 처리 오류: {e}")
         
         return report
     
@@ -136,15 +136,13 @@ class MacadamiaTradeAIAgent:
         try:
             analysis = self.analyze_trade_trends(days)
             
-            # 텔레그램으로 분석 결과 전송
-            send_analysis_summary(analysis, days)
+            # 텔레그램으로 분석 결과 전송 (별도 처리)
+            # send_analysis_summary(analysis, days)
             
             return analysis
             
         except Exception as e:
-            # 분석 오류 알림
-            send_system_alert(
-                'error',
-                f"AI 분석 중 오류 발생 ({days}일): {str(e)}"
-            )
+            # 분석 오류 알림 (별도 처리)
+            # send_system_alert('error', f"AI 분석 중 오류 발생 ({days}일): {str(e)}")
+            logger.error(f"AI 분석 중 오류 발생 ({days}일): {str(e)}")
             raise e

@@ -41,3 +41,10 @@ class DatabaseManager:
         return self.session.query(TradeRecord).filter(
             TradeRecord.created_at >= cutoff_date
         ).all()
+    
+    def get_records_by_date_range(self, start_date, end_date):
+        """날짜 범위로 레코드 조회"""
+        return self.session.query(TradeRecord).filter(
+            TradeRecord.created_at >= start_date,
+            TradeRecord.created_at <= end_date
+        ).all()
