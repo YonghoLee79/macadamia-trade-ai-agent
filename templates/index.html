@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마카다미아 무역 데이터 AI 에이전트</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #27ae60;
+            --accent-color: #e74c3c;
+            --light-bg: #ecf0f1;
+            --dark-text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--light-bg) 0%, #d5dbdb 100%);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 2rem;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2ecc71 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            border: none;
+            font-weight: 600;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .btn-custom {
+            border-radius: 25px;
+            padding: 0.7rem 2rem;
+            font-weight: 600;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2ecc71 100%);
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            background: linear-gradient(135deg, #229954 0%, var(--secondary-color) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-danger-custom {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .btn-danger-custom:hover {
+            background: linear-gradient(135deg, #a93226 0%, var(--accent-color) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: var(--secondary-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background-color: var(--accent-color);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner-border-custom {
+            color: var(--secondary-color);
+        }
+
+        .table-custom {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .table-custom thead {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+            color: white;
+        }
+
+        .analysis-content {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .stat-card {
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        .footer {
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-seedling me-2"></i>
+                마카다미아 무역 AI 에이전트
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#dashboard">대시보드</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analysis">AI 분석</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#reports">보고서</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#control">제어</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container my-4">
+        <!-- System Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-server me-2"></i>시스템 상태</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="system-status" class="d-flex flex-wrap align-items-center">
+                            <div class="me-4 mb-2">
+                                <span class="status-indicator status-online"></span>
+                                <strong>데이터베이스:</strong> <span id="db-status">연결중...</span>
+                            </div>
+                            <div class="me-4 mb-2">
+                                <span class="status-indicator status-online"></span>
+                                <strong>스케줄러:</strong> <span id="scheduler-status">실행중...</span>
+                            </div>
+                            <div class="me-4 mb-2">
+                                <strong>마지막 업데이트:</strong> <span id="last-update">확인중...</span>
+                            </div>
+                            <div class="me-4 mb-2">
+                                <strong>총 레코드:</strong> <span id="total-records">0</span>건
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div id="dashboard" class="row mb-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-trades">0</div>
+                    <div class="stat-label">총 거래 건수 (7일)</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-value">$0</div>
+                    <div class="stat-label">총 거래 금액 (7일)</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-number" id="data-period">-</div>
+                    <div class="stat-label">데이터 기간</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>주요 수출국</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="exportChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>주요 수입국</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="importChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Trend Chart -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>일별 거래 동향</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Analysis -->
+        <div id="analysis" class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-brain me-2"></i>AI 분석</h5>
+                        <div>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(1)">1일</button>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(7)">7일</button>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(30)">30일</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="analysis-content">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-brain fa-2x mb-3"></i>
+                                <p>분석할 기간을 선택해주세요.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div id="control" class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>제어판</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6><i class="fas fa-download me-2"></i>데이터 수집</h6>
+                                <p class="text-muted">수동으로 최신 마카다미아 무역 데이터를 수집합니다.</p>
+                                <button class="btn btn-primary-custom" onclick="manualCollect()">
+                                    <i class="fas fa-sync-alt me-2"></i>데이터 수집 실행
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6><i class="fas fa-file-alt me-2"></i>보고서 생성</h6>
+                                <p class="text-muted">현재 데이터를 기반으로 AI 분석 보고서를 생성합니다.</p>
+                                <button class="btn btn-danger-custom" onclick="generateReport()">
+                                    <i class="fas fa-file-pdf me-2"></i>보고서 생성
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports -->
+        <div id="reports" class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>생성된 보고서</h5>
+                        <button class="btn btn-sm btn-primary-custom" onclick="loadReports()">
+                            <i class="fas fa-refresh me-2"></i>새로고침
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="reports-list">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-file-alt fa-2x mb-3"></i>
+                                <p>보고서를 불러오는 중...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">
+                &copy; 2025 마카다미아 무역 데이터 AI 에이전트 | 
+                개발자: YonghoLee | 
+                <i class="fas fa-heart text-danger"></i> Made with AI
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let exportChart, importChart, dailyChart;
+
+        // 페이지 로드시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemStatus();
+            loadDashboardData();
+            loadReports();
+            
+            // 5분마다 자동 새로고침
+            setInterval(function() {
+                loadSystemStatus();
+                loadDashboardData();
+            }, 300000);
+        });
+
+        // 시스템 상태 로드
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('db-status').textContent = data.status.database;
+                    document.getElementById('scheduler-status').textContent = data.status.scheduler;
+                    document.getElementById('last-update').textContent = data.status.last_update;
+                    document.getElementById('total-records').textContent = data.status.total_records;
+                }
+            } catch (error) {
+                console.error('Status load error:', error);
+            }
+        }
+
+        // 대시보드 데이터 로드
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const summary = data.data.summary;
+                    
+                    // 통계 업데이트
+                    document.getElementById('total-trades').textContent = summary.total_records.toLocaleString();
+                    document.getElementById('total-value').textContent = '$' + summary.total_value.toLocaleString();
+                    document.getElementById('data-period').textContent = summary.period;
+                    
+                    // 차트 업데이트
+                    updateCharts(data.data);
+                }
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        // 차트 업데이트
+        function updateCharts(data) {
+            // 수출국 차트
+            const exportLabels = data.top_exporters.map(item => item[0]);
+            const exportValues = data.top_exporters.map(item => item[1].value);
+            
+            if (exportChart) exportChart.destroy();
+            const exportCtx = document.getElementById('exportChart').getContext('2d');
+            exportChart = new Chart(exportCtx, {
+                type: 'bar',
+                data: {
+                    labels: exportLabels,
+                    datasets: [{
+                        label: '거래금액 (USD)',
+                        data: exportValues,
+                        backgroundColor: 'rgba(39, 174, 96, 0.8)',
+                        borderColor: 'rgba(39, 174, 96, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 수입국 차트
+            const importLabels = data.top_importers.map(item => item[0]);
+            const importValues = data.top_importers.map(item => item[1].value);
+            
+            if (importChart) importChart.destroy();
+            const importCtx = document.getElementById('importChart').getContext('2d');
+            importChart = new Chart(importCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: importLabels,
+                    datasets: [{
+                        data: importValues,
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(241, 196, 15, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(26, 188, 156, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // 일별 트렌드 차트
+            const dailyLabels = Object.keys(data.daily_data).sort();
+            const dailyValues = dailyLabels.map(date => data.daily_data[date].value);
+            
+            if (dailyChart) dailyChart.destroy();
+            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+            dailyChart = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: '일별 거래금액',
+                        data: dailyValues,
+                        borderColor: 'rgba(39, 174, 96, 1)',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // AI 분석 가져오기
+        async function getAnalysis(days) {
+            const content = document.getElementById('analysis-content');
+            content.innerHTML = `
+                <div class="loading">
+                    <div class="spinner-border spinner-border-custom" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">AI가 ${days}일간의 데이터를 분석하고 있습니다...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/analysis/${days}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="analysis-content">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6><i class="fas fa-chart-line me-2"></i>${days}일 분석 결과</h6>
+                                <small class="text-muted">${data.generated_at}</small>
+                            </div>
+                            <div class="analysis-text">${data.analysis.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            분석 중 오류가 발생했습니다: ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        네트워크 오류가 발생했습니다.
+                    </div>
+                `;
+            }
+        }
+
+        // 수동 데이터 수집
+        async function manualCollect() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>수집 중...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/collect', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`데이터 수집이 완료되었습니다!\n수집된 데이터: ${data.count}건`);
+                    loadDashboardData();
+                } else {
+                    alert('데이터 수집 중 오류가 발생했습니다: ' + data.error);
+                }
+            } catch (error) {
+                alert('네트워크 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // 보고서 생성
+        function generateReport() {
+            getAnalysis(7);
+            alert('보고서가 생성되었습니다. AI 분석 섹션을 확인해주세요.');
+        }
+
+        // 보고서 목록 로드
+        async function loadReports() {
+            const container = document.getElementById('reports-list');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner-border spinner-border-custom" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">보고서를 불러오는 중...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/reports');
+                const data = await response.json();
+                
+                if (data.success && data.reports.length > 0) {
+                    container.innerHTML = `
+                        <div class="table-responsive">
+                            <table class="table table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>파일명</th>
+                                        <th>생성일시</th>
+                                        <th>크기</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.reports.map(report => `
+                                        <tr>
+                                            <td>${report.filename}</td>
+                                            <td>${report.date}</td>
+                                            <td>${(report.size / 1024).toFixed(1)} KB</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary-custom" onclick="viewReport('${report.filename}')">
+                                                    <i class="fas fa-eye me-1"></i>보기
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-file-alt fa-2x mb-3"></i>
+                            <p>생성된 보고서가 없습니다.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        보고서를 불러오는 중 오류가 발생했습니다.
+                    </div>
+                `;
+            }
+        }
+
+        // 보고서 보기
+        async function viewReport(filename) {
+            try {
+                const response = await fetch(`/api/report/${filename}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modal = new bootstrap.Modal(document.getElementById('reportModal') || createReportModal());
+                    document.getElementById('reportModalTitle').textContent = filename;
+                    document.getElementById('reportModalBody').innerHTML = data.content.replace(/\n/g, '<br>');
+                    modal.show();
+                }
+            } catch (error) {
+                alert('보고서를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 보고서 모달 생성
+        function createReportModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'reportModal';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="reportModalTitle">보고서</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="reportModalBody" style="max-height: 70vh; overflow-y: auto;">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            return modal;
+        }
+
+        // 부드러운 스크롤
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
