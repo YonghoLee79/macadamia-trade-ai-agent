@@ -28,7 +28,15 @@ logger = logging.getLogger(__name__)
 config = Config()
 db_manager = DatabaseManager(config.DATABASE_URL)
 scraper = MacadamiaTradeDataScraper()
-ai_agent = MacadamiaTradeAIAgent()
+
+# AI Agent 초기화 (실패해도 앱은 시작되도록)
+try:
+    ai_agent = MacadamiaTradeAIAgent()
+    logger.info("AI Agent initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize AI Agent: {e}")
+    ai_agent = None
+
 scheduler = MacadamiaTradeScheduler()
 
 # 스케줄러를 백그라운드에서 실행
@@ -42,6 +50,15 @@ scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
 def index():
     """메인 페이지"""
     return render_template('index.html')
+
+@app.route('/health')
+def health_check():
+    """Railway 헬스체크용 엔드포인트"""
+    return {
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
+    }, 200
 
 @app.route('/api/dashboard')
 def dashboard_data():
@@ -107,6 +124,12 @@ def dashboard_data():
 def get_analysis(days):
     """AI 분석 결과 API"""
     try:
+        if ai_agent is None:
+            return jsonify({
+                'success': False, 
+                'error': 'AI Agent not available (OpenAI API key issue)'
+            })
+        
         analysis = ai_agent.analyze_trade_trends(days)
         return jsonify({
             'success': True,
