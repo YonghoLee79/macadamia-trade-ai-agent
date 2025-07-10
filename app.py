@@ -192,6 +192,33 @@ except Exception as e:
     def error_health():
         return {'status': 'error', 'message': f'Application failed to start: {str(e)}'}, 500
 
+# 전역 app 변수 생성 (Railway WSGI를 위해 필요)
+try:
+    app = create_modular_app()
+    logger.info("Application created successfully")
+except Exception as e:
+    logger.error(f"Failed to create application: {e}")
+    # 기본 Flask 앱으로 fallback
+    from flask import Flask
+    app = Flask(__name__)
+    
+    @app.route('/')
+    def error_index():
+        return f'''
+        <html>
+            <head><title>Application Error</title></head>
+            <body>
+                <h1>🚨 Application Start Error</h1>
+                <p>Error: {str(e)}</p>
+                <p><a href="/health">Health Check</a></p>
+            </body>
+        </html>
+        ''', 500
+    
+    @app.route('/health')
+    def error_health():
+        return {'status': 'error', 'message': f'Application failed to start: {str(e)}'}, 500
+
 if __name__ == '__main__':
     # Railway 포트 설정 처리
     try:
