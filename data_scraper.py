@@ -87,16 +87,95 @@ class MacadamiaTradeDataScraper:
         return trade_data
     
     def collect_all_data(self) -> List[Dict]:
-        """모든 소스에서 데이터 수집"""
+        """모든 소스에서 데이터 수집 (테스트용 시뮬레이션 데이터 포함)"""
         all_data = []
         
+        # 실제 API 데이터 수집 시도
         logger.info("UN Comtrade 데이터 수집 시작...")
-        all_data.extend(self.scrape_un_comtrade_data())
+        try:
+            comtrade_data = self.scrape_un_comtrade_data()
+            all_data.extend(comtrade_data)
+            logger.info(f"UN Comtrade에서 {len(comtrade_data)}건 수집")
+        except Exception as e:
+            logger.warning(f"UN Comtrade 수집 실패: {e}")
         
         logger.info("한국 관세청 데이터 수집 시작...")
-        all_data.extend(self.scrape_korea_customs_data())
+        try:
+            customs_data = self.scrape_korea_customs_data()
+            all_data.extend(customs_data)
+            logger.info(f"한국 관세청에서 {len(customs_data)}건 수집")
+        except Exception as e:
+            logger.warning(f"한국 관세청 수집 실패: {e}")
+        
+        # 외부 API에서 데이터를 얻지 못한 경우 시뮬레이션 데이터 생성
+        if len(all_data) == 0:
+            logger.info("외부 API 데이터 없음. 시뮬레이션 데이터 생성...")
+            all_data.extend(self.generate_simulation_data())
         
         return all_data
+    
+    def generate_simulation_data(self) -> List[Dict]:
+        """데이터 수집 시뮬레이션을 위한 랜덤 데이터 생성"""
+        import random
+        from datetime import datetime, timedelta
+        
+        simulation_data = []
+        
+        # 시뮬레이션용 데이터 템플릿
+        countries_origin = ['Australia', 'South Africa', 'Kenya', 'Hawaii', 'Guatemala', 'New Zealand']
+        countries_destination = ['South Korea', 'Japan', 'China', 'Germany', 'USA', 'Singapore']
+        exporters = [
+            'Australian Macadamia Co.', 'Cape Nuts Export Ltd.', 'East Africa Premium Nuts',
+            'Hawaiian Nut Company', 'Central America Exports', 'Pacific Nuts Trading'
+        ]
+        importers = [
+            'Korea Nut Import Ltd.', 'Tokyo Trading Corp.', 'Beijing Food Import',
+            'European Nuts GmbH', 'American Nut Distributors', 'Asia Pacific Foods'
+        ]
+        
+        products = [
+            {'code': '0802.12', 'description': 'Fresh Macadamia Nuts in Shell'},
+            {'code': '0802.90', 'description': 'Processed Macadamia Nuts'},
+            {'code': '0801.31', 'description': 'Fresh Cashew Nuts'},
+            {'code': '0813.50', 'description': 'Mixed Dried Nuts'}
+        ]
+        
+        # 최근 30일간의 데이터 생성 (5-15건)
+        num_records = random.randint(5, 15)
+        
+        for i in range(num_records):
+            # 최근 30일 내 랜덤 날짜
+            days_ago = random.randint(1, 30)
+            trade_date = datetime.now() - timedelta(days=days_ago)
+            
+            product = random.choice(products)
+            origin = random.choice(countries_origin)
+            destination = random.choice(countries_destination)
+            exporter = random.choice(exporters)
+            importer = random.choice(importers)
+            
+            # 현실적인 거래량과 가격
+            quantity = random.randint(500, 25000)  # kg
+            price_per_kg = random.uniform(12, 35)  # USD per kg
+            total_value = quantity * price_per_kg
+            
+            simulation_data.append({
+                'date': trade_date.date(),
+                'country_origin': origin,
+                'country_destination': destination,
+                'company_exporter': exporter,
+                'company_importer': importer,
+                'product_code': product['code'],
+                'product_description': product['description'],
+                'quantity': quantity,
+                'unit': 'kg',
+                'value_usd': total_value,
+                'trade_type': random.choice(['export', 'import']),
+                'source': 'Simulation'
+            })
+        
+        logger.info(f"시뮬레이션 데이터 {len(simulation_data)}건 생성")
+        return simulation_data
     
     def save_to_database(self, trade_data: List[Dict]):
         """수집된 데이터를 데이터베이스에 저장하고 신규 데이터 알림 전송"""
@@ -106,7 +185,7 @@ class MacadamiaTradeDataScraper:
         for data in trade_data:
             try:
                 record_data = {
-                    'date': datetime.now().date(),
+                    'date': data.get('date', datetime.now().date()),
                     'country_origin': data.get('country_origin', ''),
                     'country_destination': data.get('country_destination', ''),
                     'company_exporter': data.get('company_exporter', ''),
@@ -114,23 +193,25 @@ class MacadamiaTradeDataScraper:
                     'product_code': data.get('product_code', ''),
                     'product_description': data.get('product_description', ''),
                     'quantity': float(data.get('quantity', 0)),
-                    'value_usd': float(data.get('trade_value', 0)),
-                    'trade_type': data.get('trade_type', '')
+                    'unit': data.get('unit', 'kg'),
+                    'value_usd': float(data.get('value_usd', data.get('trade_value', 0))),
+                    'trade_type': data.get('trade_type', 'export')
                 }
                 
                 # 데이터베이스에 저장
-                saved_record = self.db.add_record(record_data)
+                saved_record = self.db.save_record(record_data)
                 if saved_record:
                     new_records.append(data)
                     saved_count += 1
                 
             except Exception as e:
                 logger.error(f"데이터베이스 저장 오류: {e}")
+                continue
         
         # 신규 데이터가 있으면 텔레그램 알림 전송
         if new_records:
             try:
-                send_new_data_alert(new_records)
+                send_new_data_alert(new_records[:5])  # 최대 5건만 알림
                 logger.info(f"텔레그램 신규 데이터 알림 전송: {len(new_records)}건")
             except Exception as e:
                 logger.error(f"텔레그램 알림 전송 오류: {e}")
