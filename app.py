@@ -149,23 +149,44 @@ def create_modular_app():
     def run_scheduler():
         scheduler.start_scheduler()
     
-        # 백그라운드 스케줄러 시작 (프로덕션 환경에서만)
-        if os.getenv('FLASK_ENV') != 'development':
-            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-            scheduler_thread.start()
-            logger.info("Scheduler started in background")
-        
-        return app
+    # 백그라운드 스케줄러 시작 (프로덕션 환경에서만)
+    if os.getenv('FLASK_ENV') != 'development':
+        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        scheduler_thread.start()
+        logger.info("Scheduler started in background")
+    
+    return app
 
 # 애플리케이션 인스턴스 생성
 try:
+    # Railway 환경 변수 확인
+    railway_env = os.getenv('RAILWAY_ENVIRONMENT')
+    if railway_env:
+        logger.info(f"Running in Railway environment: {railway_env}")
+    
     app = create_modular_app()
     logger.info("Application created successfully")
 except Exception as e:
     logger.error(f"Failed to create application: {e}")
+    import traceback
+    logger.error(f"Traceback: {traceback.format_exc()}")
+    
     # 최소한의 Flask 앱 생성
     from flask import Flask
     app = Flask(__name__)
+    
+    @app.route('/')
+    def error_index():
+        return f'''
+        <html>
+            <head><title>Application Error</title></head>
+            <body>
+                <h1>🚨 Application Start Error</h1>
+                <p>Error: {str(e)}</p>
+                <p><a href="/health">Health Check</a></p>
+            </body>
+        </html>
+        ''', 500
     
     @app.route('/health')
     def error_health():
