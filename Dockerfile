@@ -1,8 +1,10 @@
 FROM python:3.12-slim
 
-# 시스템 패키지 업데이트 및 필요한 도구만 설치
+# 시스템 패키지 업데이트 및 PostgreSQL 개발 패키지 설치
 RUN apt-get update && apt-get install -y \
     gcc \
+    libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
