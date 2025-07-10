@@ -844,9 +844,41 @@
         }
 
         // 보고서 생성
-        function generateReport() {
-            getAnalysis(7);
-            alert('보고서가 생성되었습니다. AI 분석 섹션을 확인해주세요.');
+        async function generateReport() {
+            try {
+                // 로딩 표시
+                const originalText = event.target.innerHTML;
+                event.target.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>보고서 생성 중...';
+                event.target.disabled = true;
+                
+                // 샘플 보고서 생성 (AI Agent 없이도 작동)
+                const response = await fetch('/api/generate-sample-report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ ${data.message}`);
+                    // 보고서 목록 새로고침
+                    loadReports();
+                } else {
+                    alert(`❌ 보고서 생성 실패: ${data.error}`);
+                }
+                
+            } catch (error) {
+                alert('❌ 보고서 생성 중 오류가 발생했습니다.');
+                console.error(error);
+            } finally {
+                // 버튼 복원
+                if (event.target) {
+                    event.target.innerHTML = '<i class="fas fa-file-alt me-2"></i>보고서 생성';
+                    event.target.disabled = false;
+                }
+            }
         }
 
         // 보고서 목록 로드

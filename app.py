@@ -283,6 +283,119 @@ def get_report_content(filename):
         logger.error(f"Report content error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/generate-report', methods=['POST'])
+def generate_report():
+    """새로운 마카다미아 무역 보고서 생성 API"""
+    try:
+        if ai_agent is None:
+            return jsonify({
+                'success': False, 
+                'error': 'AI Agent not available (OpenAI API key issue)'
+            })
+        
+        # AI 보고서 생성
+        report = ai_agent.generate_daily_report()
+        
+        # 보고서 파일로 저장
+        date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"macadamia_report_{date_str}.md"
+        filepath = os.path.join('reports', filename)
+        
+        os.makedirs("reports", exist_ok=True)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(report)
+        
+        logger.info(f"보고서 생성 및 저장 완료: {filepath}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'보고서가 생성되었습니다: {filename}',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        logger.error(f"보고서 생성 오류: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/generate-sample-report', methods=['POST'])
+def generate_sample_report():
+    """샘플 보고서 생성 API (AI Agent 없이도 작동)"""
+    try:
+        # 최근 데이터 가져오기
+        records = db_manager.get_latest_records(30)
+        
+        total_records = len(records)
+        total_value = sum(record.value_usd or 0 for record in records)
+        
+        # 국가별 통계
+        country_stats = {}
+        for record in records:
+            country = record.country_origin
+            if country not in country_stats:
+                country_stats[country] = {'value': 0, 'count': 0}
+            country_stats[country]['value'] += record.value_usd or 0
+            country_stats[country]['count'] += 1
+        
+        top_countries = sorted(country_stats.items(), key=lambda x: x[1]['value'], reverse=True)[:5]
+        
+        # 보고서 내용 생성
+        report_content = f"""# 마카다미아 무역 분석 보고서
+
+**생성일시:** {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}
+
+## 📊 데이터 요약
+
+- **총 거래 건수:** {total_records:,}건
+- **총 거래 금액:** ${total_value:,.2f} USD
+- **분석 기간:** 최근 30일
+
+## 🌍 주요 수출국 현황
+
+"""
+        
+        for i, (country, stats) in enumerate(top_countries, 1):
+            report_content += f"{i}. **{country}**\n"
+            report_content += f"   - 거래 건수: {stats['count']:,}건\n"
+            report_content += f"   - 거래 금액: ${stats['value']:,.2f} USD\n\n"
+        
+        if not top_countries:
+            report_content += "현재 분석 가능한 데이터가 없습니다.\n\n"
+        
+        report_content += f"""## 📈 시장 동향
+
+최근 30일간의 마카다미아 무역 데이터를 분석한 결과:
+
+- 총 {total_records}건의 거래가 기록되었습니다.
+- 주요 수출국은 {top_countries[0][0] if top_countries else '데이터 없음'}입니다.
+
+---
+*이 보고서는 시스템에 의해 자동 생성되었습니다.*
+*생성 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+"""
+        
+        # 파일 저장
+        date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"sample_report_{date_str}.md"
+        filepath = os.path.join('reports', filename)
+        
+        os.makedirs("reports", exist_ok=True)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(report_content)
+        
+        logger.info(f"샘플 보고서 생성 완료: {filepath}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'샘플 보고서가 생성되었습니다: {filename}',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        logger.error(f"샘플 보고서 생성 오류: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/products/search')
 def search_products():
     """제품 검색 API"""
