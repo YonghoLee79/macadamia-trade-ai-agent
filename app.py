@@ -21,9 +21,14 @@ logger = logging.getLogger(__name__)
 
 def create_modular_app():
     """모듈화된 Flask 애플리케이션 생성"""
+    logger.info("Starting application initialization...")
+    
     # Flask 앱과 공통 컴포넌트 생성
     app = create_app()
+    logger.info("Flask app created successfully")
+    
     components = create_components()
+    logger.info("Components created successfully")
     
     # API 핸들러 인스턴스 생성
     data_api = DataAPIHandler(components)
@@ -34,9 +39,11 @@ def create_modular_app():
     telegram_api = TelegramAPI(components['db_manager'])
     database_api = DatabaseAPI(components['db_manager'], components['config'])
     health_api = HealthAPI()
+    logger.info("API handlers created successfully")
     
     # 스케줄러 설정
     scheduler = MacadamiaTradeScheduler()
+    logger.info("Scheduler initialized")
     
     # === 기본 라우트 ===
     @app.route('/')
@@ -142,16 +149,27 @@ def create_modular_app():
     def run_scheduler():
         scheduler.start_scheduler()
     
-    # 백그라운드 스케줄러 시작 (프로덕션 환경에서만)
-    if os.getenv('FLASK_ENV') != 'development':
-        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-        scheduler_thread.start()
-        logger.info("Scheduler started in background")
-    
-    return app
+        # 백그라운드 스케줄러 시작 (프로덕션 환경에서만)
+        if os.getenv('FLASK_ENV') != 'development':
+            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+            scheduler_thread.start()
+            logger.info("Scheduler started in background")
+        
+        return app
 
 # 애플리케이션 인스턴스 생성
-app = create_modular_app()
+try:
+    app = create_modular_app()
+    logger.info("Application created successfully")
+except Exception as e:
+    logger.error(f"Failed to create application: {e}")
+    # 최소한의 Flask 앱 생성
+    from flask import Flask
+    app = Flask(__name__)
+    
+    @app.route('/health')
+    def error_health():
+        return {'status': 'error', 'message': f'Application failed to start: {str(e)}'}, 500
 
 if __name__ == '__main__':
     # Railway 포트 설정 처리
