@@ -19,6 +19,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE $PORT
+# 시작 스크립트에 실행 권한 부여
+RUN chmod +x start.sh
 
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+EXPOSE 8080
+
+# Railway에서 PORT 환경변수를 제공하지 않는 경우를 대비해 기본값 설정
+ENV PORT=8080
+
+CMD ["./start.sh"]
