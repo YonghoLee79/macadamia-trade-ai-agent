@@ -97,12 +97,22 @@ class FlaskAppConfig:
 # 전역 함수들 추가
 def create_app():
     """Flask 앱 생성 함수"""
-    app = Flask(__name__)
+    import os
+    # 템플릿 폴더 경로를 명시적으로 지정
+    template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates'))
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
+    
+    app = Flask(__name__, 
+                template_folder=template_dir,
+                static_folder=static_dir)
     CORS(app)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'macadamia-trade-secret-key')
     
     # 로깅 설정
     logging.basicConfig(level=logging.INFO)
+    
+    logger.info(f"Template folder: {template_dir}")
+    logger.info(f"Static folder: {static_dir}")
     
     return app
 
