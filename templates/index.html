@@ -438,14 +438,21 @@
                         </div>
                         
                         <div class="row mt-3 pt-3 border-top">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <h6><i class="fas fa-database me-2"></i>시뮬레이션 데이터</h6>
                                 <p class="text-muted">테스트용 샘플 데이터를 생성하여 대시보드에 표시합니다.</p>
                                 <button class="btn btn-warning" onclick="uploadBulkData()">
                                     <i class="fas fa-upload me-2"></i>샘플 데이터 업로드
                                 </button>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <h6><i class="fas fa-plus-circle me-2"></i>데이터베이스 초기화</h6>
+                                <p class="text-muted">데이터가 없을 때 초기 샘플 데이터를 생성합니다.</p>
+                                <button class="btn btn-success" onclick="initDatabase()">
+                                    <i class="fas fa-plus me-2"></i>DB 초기화
+                                </button>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <h6><i class="fas fa-info-circle me-2"></i>시스템 정보</h6>
                                 <p class="text-muted">현재 시스템 상태와 데이터베이스 연결을 확인합니다.</p>
                                 <button class="btn btn-outline-secondary" onclick="loadSystemStatus()">
@@ -796,6 +803,37 @@
                     loadSystemStatus();
                 } else {
                     alert('데이터 업로드 중 오류가 발생했습니다: ' + data.error);
+                }
+            } catch (error) {
+                alert('네트워크 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // 데이터베이스 초기화
+        async function initDatabase() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            if (!confirm('데이터베이스를 초기화하고 샘플 데이터를 생성하시겠습니까?\n(기존 데이터가 많은 경우 건너뜁니다)')) {
+                return;
+            }
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>초기화 중...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/init-database', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`데이터베이스 초기화 완료!\n${data.message}`);
+                    loadDashboardData();
+                    loadSystemStatus();
+                } else {
+                    alert('데이터베이스 초기화 중 오류가 발생했습니다: ' + data.error);
                 }
             } catch (error) {
                 alert('네트워크 오류가 발생했습니다.');

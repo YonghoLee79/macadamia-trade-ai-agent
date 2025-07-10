@@ -35,6 +35,10 @@ class DatabaseManager:
         self.session.commit()
         return record
     
+    def save_record(self, record_data):
+        """add_record의 별칭 - 호환성을 위해"""
+        return self.add_record(record_data)
+    
     def get_latest_records(self, days=7):
         from datetime import datetime, timedelta
         cutoff_date = datetime.now() - timedelta(days=days)
