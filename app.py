@@ -284,5 +284,12 @@ if __name__ == '__main__':
     if os.getenv('FLASK_ENV') != 'development':
         scheduler_thread.start()
     
-    port = int(os.getenv('PORT', 5000))
+    # Railway 포트 설정 처리
+    try:
+        port = int(os.getenv('PORT', '5000'))
+    except (ValueError, TypeError):
+        port = 5000
+        logger.warning(f"Invalid PORT value: {os.getenv('PORT')}, using default 5000")
+    
+    logger.info(f"Starting Flask app on port {port}")
     app.run(debug=os.getenv('FLASK_ENV') == 'development', host='0.0.0.0', port=port)
