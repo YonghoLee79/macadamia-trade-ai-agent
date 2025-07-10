@@ -207,6 +207,9 @@
                         <a class="nav-link" href="#analysis">AI 분석</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#product-search">제품 검색</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#reports">보고서</a>
                     </li>
                     <li class="nav-item">
@@ -338,6 +341,65 @@
             </div>
         </div>
 
+        <!-- Product Search & HS Code Info -->
+        <div id="product-search" class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>제품 검색 & HS 코드 정보</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="productSearch" class="form-label">제품명 검색</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="productSearch" placeholder="예: 마카다미아, 아몬드, 커피...">
+                                        <button class="btn btn-primary-custom" type="button" onclick="searchProducts()">
+                                            <i class="fas fa-search"></i> 검색
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">제품명을 입력하면 관련 HS 코드를 표시합니다.</small>
+                                </div>
+                                
+                                <div id="searchResults" class="mt-3"></div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="hsCodeInput" class="form-label">HS 코드 직접 입력</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="hsCodeInput" placeholder="예: 080250">
+                                        <button class="btn btn-success" type="button" onclick="getHSCodeInfo()">
+                                            <i class="fas fa-info-circle"></i> 정보 조회
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">HS 코드를 입력하면 관세 및 수입 규정을 표시합니다.</small>
+                                </div>
+                                
+                                <div id="hsCodeInfo" class="mt-3"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Product Categories -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6><i class="fas fa-tags me-2"></i>제품 카테고리</h6>
+                                <div id="productCategories" class="d-flex flex-wrap gap-2">
+                                    <div class="text-center">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <small class="d-block mt-1">카테고리 로딩 중...</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Control Panel -->
         <div id="control" class="row mb-4">
             <div class="col-12">
@@ -372,6 +434,23 @@
                                         <i class="fas fa-paper-plane me-1"></i>요약 전송
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3 pt-3 border-top">
+                            <div class="col-md-6 mb-3">
+                                <h6><i class="fas fa-database me-2"></i>시뮬레이션 데이터</h6>
+                                <p class="text-muted">테스트용 샘플 데이터를 생성하여 대시보드에 표시합니다.</p>
+                                <button class="btn btn-warning" onclick="uploadBulkData()">
+                                    <i class="fas fa-upload me-2"></i>샘플 데이터 업로드
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6><i class="fas fa-info-circle me-2"></i>시스템 정보</h6>
+                                <p class="text-muted">현재 시스템 상태와 데이터베이스 연결을 확인합니다.</p>
+                                <button class="btn btn-outline-secondary" onclick="loadSystemStatus()">
+                                    <i class="fas fa-refresh me-2"></i>상태 새로고침
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -699,6 +778,33 @@
             }
         }
 
+        // 대량 시뮬레이션 데이터 업로드
+        async function uploadBulkData() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>업로드 중...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/products/bulk-data', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`시뮬레이션 데이터 업로드 완료!\n저장된 데이터: ${data.count}건`);
+                    loadDashboardData();
+                    loadSystemStatus();
+                } else {
+                    alert('데이터 업로드 중 오류가 발생했습니다: ' + data.error);
+                }
+            } catch (error) {
+                alert('네트워크 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
         // 보고서 생성
         function generateReport() {
             getAnalysis(7);
@@ -821,6 +927,212 @@
                     });
                 }
             });
+        });
+
+        // 제품 검색 함수
+        async function searchProducts() {
+            const query = document.getElementById('productSearch').value.trim();
+            const container = document.getElementById('searchResults');
+            
+            if (!query) {
+                container.innerHTML = '<div class="alert alert-warning">검색어를 입력해주세요.</div>';
+                return;
+            }
+            
+            container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            try {
+                const response = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.success && data.results.length > 0) {
+                    let html = '<div class="mt-3"><h6>검색 결과:</h6>';
+                    
+                    data.results.forEach(product => {
+                        html += `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">${product.name}</h6>
+                                    <div class="row">
+                        `;
+                        
+                        product.codes.forEach(code => {
+                            html += `
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                        <div>
+                                            <strong>${code.code}</strong><br>
+                                            <small class="text-muted">${code.description}</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="getHSCodeInfoByCode('${code.code}')">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div></div></div>';
+                    });
+                    
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="alert alert-info">검색 결과가 없습니다.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="alert alert-danger">검색 중 오류가 발생했습니다.</div>';
+            }
+        }
+
+        // HS 코드 정보 조회
+        async function getHSCodeInfo() {
+            const hsCode = document.getElementById('hsCodeInput').value.trim();
+            const container = document.getElementById('hsCodeInfo');
+            
+            if (!hsCode) {
+                container.innerHTML = '<div class="alert alert-warning">HS 코드를 입력해주세요.</div>';
+                return;
+            }
+            
+            await getHSCodeInfoByCode(hsCode);
+        }
+
+        // HS 코드별 정보 조회 (공통 함수)
+        async function getHSCodeInfoByCode(hsCode) {
+            const container = document.getElementById('hsCodeInfo');
+            
+            container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            try {
+                const response = await fetch(`/api/hscode/${hsCode}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const info = data.info;
+                    let html = `
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">HS 코드: ${data.hs_code}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-percentage me-2"></i>수입관세율</h6>
+                                        <p class="text-primary fw-bold">${info.tariff_rate}</p>
+                                        
+                                        <h6><i class="fas fa-clipboard-list me-2"></i>수입규정</h6>
+                                        <ul class="list-unstyled">
+                    `;
+                    
+                    info.import_regulations.forEach(regulation => {
+                        html += `<li><i class="fas fa-check text-success me-2"></i>${regulation}</li>`;
+                    });
+                    
+                    html += `
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-exclamation-triangle me-2"></i>주의사항</h6>
+                                        <ul class="list-unstyled">
+                    `;
+                    
+                    info.precautions.forEach(precaution => {
+                        html += `<li><i class="fas fa-info-circle text-warning me-2"></i>${precaution}</li>`;
+                    });
+                    
+                    html += `
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6><i class="fas fa-info me-2"></i>추가 정보</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong>원산지 요구사항:</strong><br>
+                                            <span class="text-muted">${info.additional_info.origin_requirements}</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>보관 조건:</strong><br>
+                                            <span class="text-muted">${info.additional_info.storage_conditions}</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>시장 정보:</strong><br>
+                                            <span class="text-muted">${info.additional_info.market_info}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="alert alert-danger">HS 코드 정보를 찾을 수 없습니다.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="alert alert-danger">정보 조회 중 오류가 발생했습니다.</div>';
+            }
+        }
+
+        // 제품 카테고리 로드
+        async function loadProductCategories() {
+            const container = document.getElementById('productCategories');
+            
+            try {
+                const response = await fetch('/api/products/categories');
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '';
+                    
+                    Object.entries(data.categories).forEach(([category, products]) => {
+                        html += `
+                            <div class="dropdown me-2 mb-2">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    ${category}
+                                </button>
+                                <ul class="dropdown-menu">
+                        `;
+                        
+                        products.forEach(product => {
+                            html += `
+                                <li><a class="dropdown-item" href="#" onclick="document.getElementById('productSearch').value='${product.name}'; searchProducts(); return false;">
+                                    ${product.name}
+                                </a></li>
+                            `;
+                        });
+                        
+                        html += '</ul></div>';
+                    });
+                    
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="text-muted">카테고리를 불러올 수 없습니다.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="text-muted">카테고리 로딩 실패</div>';
+            }
+        }
+
+        // Enter 키 이벤트 처리
+        document.getElementById('productSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchProducts();
+            }
+        });
+
+        document.getElementById('hsCodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                getHSCodeInfo();
+            }
+        });
+
+        // 페이지 로드시 카테고리 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            // ...existing code...
+            loadProductCategories();
         });
     </script>
 </body>

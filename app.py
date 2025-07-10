@@ -14,6 +14,7 @@ from data_scraper import MacadamiaTradeDataScraper
 from ai_agent import MacadamiaTradeAIAgent
 from scheduler import MacadamiaTradeScheduler
 from telegram_notifier import send_system_alert, send_new_data_alert, send_analysis_summary, send_daily_summary
+from product_database import search_products_by_name, get_hs_code_info, get_all_product_categories
 
 # Flask 앱 초기화
 app = Flask(__name__)
@@ -279,6 +280,78 @@ def get_report_content(filename):
             return jsonify({'success': False, 'error': '파일을 찾을 수 없습니다.'})
     except Exception as e:
         logger.error(f"Report content error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/products/search')
+def search_products():
+    """제품 검색 API"""
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'success': False, 'error': '검색어를 입력해주세요.'})
+        
+        results = search_products_by_name(query)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'results': results
+        })
+    except Exception as e:
+        logger.error(f"Product search error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/products/categories')
+def get_product_categories():
+    """제품 카테고리 목록 API"""
+    try:
+        categories = get_all_product_categories()
+        
+        return jsonify({
+            'success': True,
+            'categories': categories
+        })
+    except Exception as e:
+        logger.error(f"Product categories error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/hscode/<hs_code>')
+def get_hscode_info(hs_code):
+    """HS 코드 상세 정보 API"""
+    try:
+        if not hs_code or len(hs_code) < 4:
+            return jsonify({'success': False, 'error': '유효한 HS 코드를 입력해주세요.'})
+        
+        info = get_hs_code_info(hs_code)
+        
+        return jsonify({
+            'success': True,
+            'hs_code': hs_code,
+            'info': info
+        })
+    except Exception as e:
+        logger.error(f"HS code info error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/products/bulk-data', methods=['POST'])
+def upload_bulk_data():
+    """대량 시뮬레이션 데이터 업로드 API (개발/테스트용)"""
+    try:
+        from analyze_historical_data import generate_sample_trade_data
+        
+        # 시뮬레이션 데이터 생성
+        trade_data = generate_sample_trade_data()
+        
+        # 데이터베이스에 저장
+        saved_count = scraper.save_to_database(trade_data)
+        
+        return jsonify({
+            'success': True,
+            'message': f'시뮬레이션 데이터 업로드 완료: {saved_count}건 저장',
+            'count': saved_count
+        })
+    except Exception as e:
+        logger.error(f"Bulk data upload error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/status')
