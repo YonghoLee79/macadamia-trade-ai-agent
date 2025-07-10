@@ -4,9 +4,17 @@ import logging
 from datetime import datetime
 from data_scraper import MacadamiaTradeDataScraper
 from ai_agent import MacadamiaTradeAIAgent
-from excel_reporter import MacadamiaTradeExcelReporter
 from config import Config
 from telegram_notifier import send_daily_summary, send_system_alert
+
+# Excel reporting is optional (requires pandas)
+try:
+    from excel_reporter import MacadamiaTradeExcelReporter
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Excel reporting not available (pandas not installed)")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,7 +23,7 @@ class MacadamiaTradeScheduler:
     def __init__(self):
         self.scraper = MacadamiaTradeDataScraper()
         self.ai_agent = MacadamiaTradeAIAgent()
-        self.excel_reporter = MacadamiaTradeExcelReporter()
+        self.excel_reporter = MacadamiaTradeExcelReporter() if EXCEL_AVAILABLE else None
         self.config = Config()
     
     def daily_data_collection_job(self):
@@ -37,15 +45,24 @@ class MacadamiaTradeScheduler:
                     # 마크다운 보고서 저장
                     self.save_daily_report(report)
                     
-                    # 엑셀 보고서 생성
-                    excel_filename = self.excel_reporter.generate_daily_excel_report()
-                    if excel_filename:
-                        logger.info(f"엑셀 보고서 생성 완료: {excel_filename}")
-                        
-                        # 비교 분석 보고서도 생성
-                        comparison_filename = self.excel_reporter.create_comparison_report(7)
-                        if comparison_filename:
-                            logger.info(f"비교 분석 보고서 생성 완료: {comparison_filename}")
+                    # 엑셀 보고서 생성 (pandas 사용 가능한 경우에만)
+                    excel_filename = None
+                    comparison_filename = None
+                    
+                    if self.excel_reporter:
+                        try:
+                            excel_filename = self.excel_reporter.generate_daily_excel_report()
+                            if excel_filename:
+                                logger.info(f"엑셀 보고서 생성 완료: {excel_filename}")
+                                
+                                # 비교 분석 보고서도 생성
+                                comparison_filename = self.excel_reporter.create_comparison_report(7)
+                                if comparison_filename:
+                                    logger.info(f"비교 분석 보고서 생성 완료: {comparison_filename}")
+                        except Exception as e:
+                            logger.warning(f"엑셀 보고서 생성 실패 (옵션 기능): {e}")
+                    else:
+                        logger.info("엑셀 보고서 기능 비활성화 (pandas 미설치)")
                     
                     # 일일 요약 데이터 생성
                     summary_data = self._generate_daily_summary(result)

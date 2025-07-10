@@ -1,5 +1,4 @@
 import requests
-import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Dict
 import time
@@ -107,7 +106,7 @@ class MacadamiaTradeDataScraper:
         for data in trade_data:
             try:
                 record_data = {
-                    'date': pd.to_datetime('today').date(),
+                    'date': datetime.now().date(),
                     'country_origin': data.get('country_origin', ''),
                     'country_destination': data.get('country_destination', ''),
                     'company_exporter': data.get('company_exporter', ''),
