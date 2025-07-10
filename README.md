@@ -197,7 +197,51 @@ PORT=5000
 - **Input 검증**: 모든 사용자 입력 검증
 - **Secret Key**: Flask 세션 보안
 
-## 📈 모니터링
+## � 배포 (Deploy)
+
+### Railway로 배포하기
+
+1. **Railway 계정 생성**: [railway.app](https://railway.app)에서 GitHub 계정으로 가입
+2. **GitHub 저장소 연결**: Railway 대시보드에서 GitHub 저장소 연결
+3. **환경변수 설정**: Railway 프로젝트 설정에서 환경변수 추가:
+   ```
+   OPENAI_API_KEY=your_openai_api_key
+   TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+   TELEGRAM_CHAT_ID=your_telegram_chat_id
+   DATABASE_URL=postgresql://... (Railway에서 자동 생성)
+   PUBLIC_URL=your-app-name.railway.app
+   FLASK_ENV=production
+   ```
+4. **자동 배포**: main 브랜치에 push하면 자동으로 배포됩니다.
+
+### Render로 배포하기
+
+1. **Render 계정 생성**: [render.com](https://render.com)에서 GitHub 계정으로 가입
+2. **Web Service 생성**: GitHub 저장소를 연결하여 Web Service 생성
+3. **빌드 설정**:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn app:app`
+4. **환경변수 설정**: Render 대시보드에서 환경변수 추가
+
+### Heroku로 배포하기
+
+1. **Heroku CLI 설치**: `brew install heroku/brew/heroku`
+2. **Heroku 로그인**: `heroku login`
+3. **앱 생성**: `heroku create your-app-name`
+4. **환경변수 설정**: `heroku config:set KEY=VALUE`
+5. **배포**: `git push heroku main`
+
+### Docker로 배포하기
+
+```bash
+# Docker 이미지 빌드
+docker build -t macadamia-trade-ai .
+
+# 컨테이너 실행
+docker run -p 5000:5000 --env-file .env macadamia-trade-ai
+```
+
+## �📈 모니터링
 
 - **실시간 상태**: 시스템 상태 실시간 모니터링
 - **에러 로깅**: 상세한 에러 로그 기록
