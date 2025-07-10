@@ -298,16 +298,16 @@
             </div>
         </div>
 
-        <!-- Daily Trend Chart -->
+        <!-- Monthly Trend Chart -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>일별 거래 동향</h5>
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>월별 거래 동향</h5>
                     </div>
                     <div class="card-body">
                         <div class="chart-container">
-                            <canvas id="dailyChart"></canvas>
+                            <canvas id="monthlyChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -321,9 +321,9 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-brain me-2"></i>AI 분석</h5>
                         <div>
-                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(1)">1일</button>
-                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(7)">7일</button>
-                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(30)">30일</button>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(90)">3개월</button>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(180)">6개월</button>
+                            <button class="btn btn-sm btn-primary-custom" onclick="getAnalysis(365)">1년</button>
                         </div>
                     </div>
                     <div class="card-body">
@@ -416,7 +416,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let exportChart, importChart, dailyChart;
+        let exportChart, importChart, monthlyChart;
 
         // 페이지 로드시 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -543,19 +543,19 @@
                 }
             });
 
-            // 일별 트렌드 차트
-            const dailyLabels = Object.keys(data.daily_data).sort();
-            const dailyValues = dailyLabels.map(date => data.daily_data[date].value);
+            // 월별 트렌드 차트
+            const monthlyLabels = Object.keys(data.monthly_data).sort();
+            const monthlyValues = monthlyLabels.map(month => data.monthly_data[month].value);
             
-            if (dailyChart) dailyChart.destroy();
-            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-            dailyChart = new Chart(dailyCtx, {
+            if (monthlyChart) monthlyChart.destroy();
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChart = new Chart(monthlyCtx, {
                 type: 'line',
                 data: {
-                    labels: dailyLabels,
+                    labels: monthlyLabels,
                     datasets: [{
-                        label: '일별 거래금액',
-                        data: dailyValues,
+                        label: '월별 거래금액',
+                        data: monthlyValues,
                         borderColor: 'rgba(39, 174, 96, 1)',
                         backgroundColor: 'rgba(39, 174, 96, 0.1)',
                         tension: 0.4,

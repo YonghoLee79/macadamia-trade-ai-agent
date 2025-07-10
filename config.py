@@ -16,7 +16,8 @@ class Config:
     
     # 데이터 소스 URLs
     TRADE_DATA_SOURCES = {
-        'comtrade': 'https://comtrade.un.org/api/get',
+        'comtrade': 'https://comtradeapi.un.org/data/v1/get/C/M/HS',
+        'comtrade_legacy': 'https://comtrade.un.org/api/get',
         'trademap': 'https://www.trademap.org',
         'customs_gov': 'https://unipass.customs.go.kr'
     }

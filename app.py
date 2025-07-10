@@ -64,8 +64,8 @@ def health_check():
 def dashboard_data():
     """대시보드 데이터 API"""
     try:
-        # 최근 7일 데이터 가져오기
-        records = db_manager.get_latest_records(7)
+        # 최근 1년 데이터 가져오기
+        records = db_manager.get_latest_records(365)
         
         # 기본 통계 계산
         total_records = len(records)
@@ -93,14 +93,14 @@ def dashboard_data():
         top_exporters = sorted(export_stats.items(), key=lambda x: x[1]['value'], reverse=True)[:5]
         top_importers = sorted(import_stats.items(), key=lambda x: x[1]['value'], reverse=True)[:5]
         
-        # 일별 데이터 (최근 7일)
-        daily_data = {}
+        # 월별 데이터 (최근 12개월)
+        monthly_data = {}
         for record in records:
-            date_str = record.date.strftime('%Y-%m-%d')
-            if date_str not in daily_data:
-                daily_data[date_str] = {'value': 0, 'count': 0}
-            daily_data[date_str]['value'] += record.value_usd or 0
-            daily_data[date_str]['count'] += 1
+            month_str = record.date.strftime('%Y-%m')
+            if month_str not in monthly_data:
+                monthly_data[month_str] = {'value': 0, 'count': 0}
+            monthly_data[month_str]['value'] += record.value_usd or 0
+            monthly_data[month_str]['count'] += 1
         
         return jsonify({
             'success': True,
@@ -108,11 +108,11 @@ def dashboard_data():
                 'summary': {
                     'total_records': total_records,
                     'total_value': total_value,
-                    'period': f"{(datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')} ~ {datetime.now().strftime('%Y-%m-%d')}"
+                    'period': f"{(datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')} ~ {datetime.now().strftime('%Y-%m-%d')}"
                 },
                 'top_exporters': top_exporters,
                 'top_importers': top_importers,
-                'daily_data': daily_data
+                'monthly_data': monthly_data
             }
         })
         

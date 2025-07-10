@@ -377,3 +377,65 @@ class MacadamiaTradeDataScraper:
                 return datetime.now().date()
         except:
             return datetime.now().date()
+    
+    def scrape_un_comtrade_data_yearly(self, years: List[int] = None) -> List[Dict]:
+        """UN Comtrade API에서 지정된 연도들의 마카다미아 무역 데이터 수집"""
+        if years is None:
+            # 기본값: 지난 1년 (2023, 2024)
+            years = [2023, 2024]
+            
+        trade_data = []
+        
+        for year in years:
+            logger.info(f"{year}년 데이터 수집 시작...")
+            for hs_code in self.config.MACADAMIA_HS_CODES:
+                try:
+                    # UN Comtrade API 호출
+                    params = {
+                        'max': 50000,
+                        'type': 'C',
+                        'freq': 'M',
+                        'px': 'HS',
+                        'ps': str(year),
+                        'r': 'all',
+                        'p': 'all',
+                        'rg': 'all',
+                        'cc': hs_code,
+                        'fmt': 'json'
+                    }
+                    
+                    response = self.session.get(
+                        self.config.TRADE_DATA_SOURCES['comtrade'],
+                        params=params,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if 'dataset' in data and data['dataset']:
+                            for record in data['dataset']:
+                                trade_data.append({
+                                    'country_origin': record.get('rtTitle', ''),
+                                    'country_destination': record.get('ptTitle', ''),
+                                    'product_code': record.get('cmdCode', ''),
+                                    'product_description': record.get('cmdDescE', ''),
+                                    'trade_value': record.get('TradeValue', 0),
+                                    'quantity': record.get('qty', 0),
+                                    'trade_type': 'export' if record.get('rgDesc') == 'Export' else 'import',
+                                    'period': record.get('period', ''),
+                                    'year': year,
+                                    'source': 'UN_Comtrade'
+                                })
+                            logger.info(f"{year}년 {hs_code} 데이터 {len([r for r in data['dataset']])}건 수집")
+                        else:
+                            logger.warning(f"{year}년 {hs_code} 데이터 없음")
+                    else:
+                        logger.error(f"API 호출 실패: {response.status_code}")
+                    
+                    time.sleep(2)  # API 호출 제한 준수
+                    
+                except Exception as e:
+                    logger.error(f"UN Comtrade {year}년 {hs_code} 데이터 수집 오류: {e}")
+                    
+        logger.info(f"총 {len(trade_data)}건의 데이터 수집 완료")
+        return trade_data
